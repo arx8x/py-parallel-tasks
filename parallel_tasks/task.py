@@ -1,27 +1,29 @@
 from dataclasses import dataclass, field
-from typing import Callable
+from typing import Callable, Union
 from uuid import uuid4
 from threading import Thread
+from .function import Function
 
 
 @dataclass
 class Task:
     name: str
-    target: Callable
-    arguments: dict
+    target: Function
     timeout: int = 0
-    pre_exec: Callable = field(default=None, repr=False)
-    callback: Callable = field(default=None, repr=False)
+    pre_exec: Function = field(default=None, repr=False)
+    callback: Union[Callable, Function] = field(default=None, repr=False)
     return_data: type = field(init=False, default=None, repr=False)
     error: Exception = field(init=False, default=None)
     id: str = field(init=False)
 
+    # def __init__(self, target: Function, arguments: dict, name: str,
+    #              timeout: int = 0, pre_exec, ):
+    #
+
     def __post_init__(self):
         self.__thread = None
         self.__did_run = False
-        if type(self.arguments) != dict:
-            raise ValueError("arguments property must be a dictionary with "
-                             "keys corresponding to target's arguments")
+
         if self.timeout < -1:
             self.timeout = -1
 
@@ -55,10 +57,16 @@ class Task:
         if not self.is_running:
             return
         try:
-            return_data = self.target(**self.arguments)
+            return_data = self.target.target(**self.target.arguments)
             self.return_data = return_data
         except Exception as error:
             self.error = error
         self.__did_run = True
         if self.callback:
+            self.__post_exec()
+
+    def __post_exec(self):
+        if callable(self.callback):
             self.callback(self)
+        elif type(self.callback) is Function:
+            self.callback.target(self)

@@ -1,7 +1,5 @@
-from threading import Thread, Semaphore, current_thread
 from typing import Callable
 from time import sleep
-from .task import Task
 
 
 class ParallelRunner:
