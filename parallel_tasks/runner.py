@@ -7,36 +7,31 @@ from .task import Task
 class ParallelRunner:
 
     def __init__(self, tasks: list, callback: Callable = None, max_parallel: int = 4):
+        for task in tasks:
+            if task.is_running or task.did_complete:
+                raise Exception(f"Cannot add task {task.name} ({task.id}) to task queue because "
+                                f"it's either running or completed running")
         self.__tasks = tasks
         self.__callback = callback
         self.__max_parallel = max_parallel
 
     def run_all(self):
-        # this wrapper makes it possible to capture output from the 'target'
-        def _wrapper(task: Task):
-            try:
-                return_data = task.target(**task.arguments)
-                task.return_data = return_data
-            except Exception as error:
-                task.error = error
         # copy the array so popping won't mutate the original argument
         task_queue = self.__tasks.copy()
-        thread_pool = []
+        task_pool = []
         # run as long as there are active threads "and" tasks in the queue
-        while thread_pool or task_queue:
+        while task_pool or task_queue:
             # check for finished tasks and carry out post-exec tasks
-            for thread in thread_pool:
-                if not thread.is_alive():
-                    thread_pool.remove(thread)
+            for task in task_pool:
+                if task.did_complete:
+                    task_pool.remove(task)
                     # TODO: termination procedure
 
-            slots_left = self.__max_parallel - len(thread_pool)
+            slots_left = self.__max_parallel - len(task_pool)
             for _ in range(slots_left):
                 if not task_queue:
                     break
                 task = task_queue.pop()
-                # call the wrapper with the task as argument
-                thread = Thread(target=_wrapper, name=task.id, args=[task], daemon=False)
-                thread.start()
-                thread_pool.append(thread)
+                task_pool.append(task)
+                task.run()
             sleep(0.5)
