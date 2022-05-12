@@ -19,15 +19,13 @@ def iter_function(iters: int, print_stats: bool):
     # runs sha1 hashing on random bytes n number of times
     thread_name = current_thread().name
     print(f"iter_function has started on '{thread_name}' thread for {iters} iterations")
-    c = 0
     t1 = time.time()
     for _ in range(iters):
         bytes = random.randbytes(0xfffff)
         hashlib.sha1(bytes).hexdigest()
-        c += 1
     tdelta = time.time() - t1
     if print_stats:
-        print(f"hashing {c} took {tdelta} seconds")
+        print(f"hashing {iters} took {tdelta} seconds")
     print(f"iter_function has finished on '{thread_name}'")
     return tdelta
 
@@ -75,7 +73,7 @@ runner = ParallelRunner(tasks=[task1, task2, task3, task4])
 runner.run_all()
 
 
-# print task3's output to see how long it took for 1000 iterations
+# print task3's output to see how long it took for 2000 iterations
 print(f"output of task3 -> {task3.return_data} seconds for 2000 iterations")
 
 if not task4.error:
