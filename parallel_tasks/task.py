@@ -50,6 +50,23 @@ class Task:
     def thread_exit(self):
         return not self.__thread.is_alive()
 
+    def __repr__(self):
+        repr = f"{self.__class__.__name__} {self.name}"
+        status = "Ready to run"
+        if self.did_complete:
+            status = "Completed "
+            if self.error:
+                status += "with error"
+            else:
+                status += "sccessfully"
+        elif self.is_running:
+            status = "Running"
+        repr += f" (id: {self.id}, status: {status}"
+        if self.__return_data:
+            repr += f", output: <{type(self.__return_data).__name__} at {hex(id(self.__return_data))}>"
+        repr += ')'
+        return repr
+
     def run(self):
         if self.is_running:
             raise Exception("The task is already running")
