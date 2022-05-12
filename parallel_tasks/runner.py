@@ -26,12 +26,15 @@ class ParallelRunner:
         # run as long as there are active threads "and" tasks in the queue
         while task_pool or task_queue:
             # check for finished tasks and carry out post-exec tasks
-            for task in task_pool.copy():
+            new_task_pool = []
+            for task in task_pool:
                 if task.did_complete:
-                    task_pool.remove(task)
                     if task.error:
                         self.__failed_tasks.append(task)
+                else:
+                    new_task_pool.append(task)
                     # TODO: termination procedure
+            task_pool = new_task_pool
             slots_left = self.__max_parallel - len(task_pool)
             for _ in range(slots_left):
                 if not task_queue:
