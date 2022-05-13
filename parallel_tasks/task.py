@@ -4,10 +4,15 @@ from threading import Thread
 from .function import Function
 
 
+class InvalidTaskState(Exception):
+    pass
+
+
 class Task:
 
     def __init__(self, target: Function, name: str, timeout: int = 0,
-                 pre_exec: Function = None, callback: Union[Callable, Function] = None):
+                 pre_exec: Function = None, callback: Union[Callable, Function] = None,
+                 dependency: 'Task' = None):
         self.__thread = None
         self.__target = target
         self.__name = name
@@ -19,6 +24,10 @@ class Task:
         self.__id = str(uuid4())
         self.__did_run = False
         self.__running = False
+        self.__dependency = dependency
+        # make sure the dependency is an instance of this class
+        if self.__dependency and (type(self.__dependency) != type(self)):
+            raise Exception(f"Dependecy must be a {self.__class__.__name__} instance")
 
     @property
     def id(self):
@@ -66,24 +75,31 @@ class Task:
         return repr
 
     def run(self):
-        self.__once_run_guard()
+        self.__run_once_guard()
         self.__thread = Thread(target=self.__run_proxy, daemon=False, name=self.name)
         self.__thread.start()
 
     def run_sync(self):
-        print(f"run_sync -> {self}")
-        self.__once_run_guard()
+        self.__run_once_guard()
         self.__run_proxy()
 
-    def __once_run_guard(self):
+    def __run_once_guard(self):
         if self.is_running:
-            raise Exception("The task is already running")
+            raise InvalidTaskState("The task is already running")
         if self.did_complete:
-            raise Exception("The task has ran to completion")
+            raise InvalidTaskState("The task has already ran to completion")
 
     def __run_proxy(self):
         if not self.__running:
             self.__running = True
+        else:
+            return
+        if self.__dependency:
+            try:
+                self.__dependency.run_sync()
+            # catch and rethrow stating where it failed
+            except Exception as e:
+                raise Exception(f"Error while trying to run dependency: {e}")
         try:
             return_data = self.__target.target(**self.__target.arguments)
             self.__return_data = return_data
