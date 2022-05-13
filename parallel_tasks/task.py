@@ -18,6 +18,7 @@ class Task:
         self.__error = None
         self.__id = str(uuid4())
         self.__did_run = False
+        self.__running = False
 
     @property
     def id(self):
@@ -37,10 +38,7 @@ class Task:
 
     @property
     def is_running(self):
-        if self.__thread:
-            if self.__thread.is_alive():
-                return True
-        return False
+        return self.__running
 
     @property
     def did_complete(self):
@@ -51,7 +49,7 @@ class Task:
         return not self.__thread.is_alive()
 
     def __repr__(self):
-        repr = f"{self.__class__.__name__} {self.name}"
+        repr = f"{self.__class__.__name__} '{self.name}'"
         status = "Ready to run"
         if self.did_complete:
             status = "Completed "
@@ -68,22 +66,31 @@ class Task:
         return repr
 
     def run(self):
+        self.__once_run_guard()
+        self.__thread = Thread(target=self.__run_proxy, daemon=False, name=self.name)
+        self.__thread.start()
+
+    def run_sync(self):
+        print(f"run_sync -> {self}")
+        self.__once_run_guard()
+        self.__run_proxy()
+
+    def __once_run_guard(self):
         if self.is_running:
             raise Exception("The task is already running")
         if self.did_complete:
             raise Exception("The task has ran to completion")
-        self.__thread = Thread(target=self.__run_proxy, daemon=False, name=self.name)
-        self.__thread.start()
 
     def __run_proxy(self):
-        if not self.is_running:
-            return
+        if not self.__running:
+            self.__running = True
         try:
             return_data = self.__target.target(**self.__target.arguments)
             self.__return_data = return_data
         except Exception as error:
             self.__error = error
         self.__did_run = True
+        self.__running = False
         if self.__callback:
             self.__post_exec()
 
