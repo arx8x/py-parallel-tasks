@@ -1,5 +1,8 @@
-from .runner import ParallelRunner, InvalidTaskState
-from .task import Task
+from .runner import ParallelRunner
+from .task import Task, InvalidTaskState, TaskPriority
 from .function import Function
 
-__all__ = ['ParallelRunner', 'Task', 'Function', 'InvalidTaskState']
+globals().update(TaskPriority.__members__)
+
+__all__ = ['ParallelRunner', 'Task', 'Function', 'InvalidTaskState',
+           'PRIORITY_LOW', 'PRIORITY_HIGH', 'PRIORITY_MEDIUM', 'PRIORITY_UNSPECIFIED']

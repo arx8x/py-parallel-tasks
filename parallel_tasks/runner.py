@@ -20,8 +20,10 @@ class ParallelRunner:
         return self.__failed_tasks
 
     def run_all(self):
-        # copy the array so popping won't mutate the original argument
+        # copy the array so popping or sorting won't mutate the original ivar
         task_queue = self.__tasks.copy()
+        # sort tasks based on priority
+        task_queue = sorted(task_queue, key=lambda x: x.priority, reverse=True)
         task_pool = []
         # run as long as there are active threads "and" tasks in the queue
         while task_pool or task_queue:
@@ -39,7 +41,7 @@ class ParallelRunner:
             for _ in range(slots_left):
                 if not task_queue:
                     break
-                task = task_queue.pop()
+                task = task_queue.pop(0)
                 task_pool.append(task)
                 task.run()
             sleep(self.polling_rate)

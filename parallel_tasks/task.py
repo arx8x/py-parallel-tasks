@@ -2,21 +2,30 @@ from typing import Callable, Union
 from uuid import uuid4
 from threading import Thread
 from .function import Function
+import enum
 
 
 class InvalidTaskState(Exception):
     pass
 
 
+class TaskPriority(enum.IntFlag):
+    PRIORITY_HIGH = 100
+    PRIORITY_MEDIUM = 50
+    PRIORITY_LOW = 1
+    PRIORITY_UNSPECIFIED = -1
+
+
 class Task:
 
     def __init__(self, target: Function, name: str, timeout: int = 0,
                  pre_exec: Function = None, callback: Union[Callable, Function] = None,
-                 dependency: 'Task' = None):
+                 dependency: 'Task' = None, priority: TaskPriority = TaskPriority.PRIORITY_UNSPECIFIED):
+        self.priority = priority
+        self.timeout = timeout if timeout > -2 else -1
         self.__thread = None
         self.__target = target
         self.__name = name
-        self.timeout = timeout if timeout > -2 else -1
         self.__pre_exec = pre_exec
         self.__callback = callback
         self.__return_data = None
