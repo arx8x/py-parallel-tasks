@@ -52,7 +52,7 @@ task1_function = Function(iter_function, {'iters': 1000, 'print_stats': True})
 task1 = Task(name="iter1000", target=task1_function)
 
 # for task2, we're assigning a callback too, so we'll know when the task has finished
-task2 = Task(name='wait1', target=Function(wait_function, {}), callback=task_finished_callback)
+task2 = Task(name='wait1', target=Function(wait_function), callback=task_finished_callback)
 
 # choosing not to print stats for task 3
 task3_function = Function(iter_function, {'iters': 2000, 'print_stats': False})
@@ -60,7 +60,7 @@ task3 = Task(name="iter2000", target=task3_function)
 
 # task4's function will return data but it has a chance of failing
 # we're assigining it a callback and see if it failed
-task4 = Task(name='snap1', target=Function(thanos_function, {}), callback=task_finished_callback)
+task4 = Task(name='snap1', target=Function(thanos_function), callback=task_finished_callback)
 
 
 # create a runner instance that will run 2 tasks at once

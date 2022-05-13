@@ -5,7 +5,7 @@ from typing import Callable
 @dataclass
 class Function:
     target: Callable
-    arguments: dict = field(default_factory={})
+    arguments: dict = field(default_factory=dict)
 
     def __post_init__(self):
         if not callable(self.target):
