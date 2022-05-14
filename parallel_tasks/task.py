@@ -3,6 +3,7 @@ from uuid import uuid4
 from threading import Thread
 from .function import Function
 import enum
+import warnings
 
 
 class InvalidTaskState(Exception):
@@ -34,6 +35,8 @@ class Task:
         self.__did_run = False
         self.__running = False
         self.__dependency = dependency
+        self.__did_run_at_least_once = False
+        self.__did_reset = False
         # make sure the dependency is an instance of this class
         if self.__dependency and (type(self.__dependency) != type(self)):
             raise Exception(f"Dependecy must be a {self.__class__.__name__} instance")
@@ -63,20 +66,25 @@ class Task:
         return self.__did_run
 
     @property
-    def thread_exit(self):
-        return not self.__thread.is_alive()
+    def is_rerun(self):
+        if self.__did_run_at_least_once:
+            if self.__did_reset:
+                return True
+        return False
 
     def __repr__(self):
         repr = f"{self.__class__.__name__} '{self.name}'"
-        status = "Ready to run"
+        status = "Ready to " + ("re-run" if self.is_rerun else "run")
         if self.did_complete:
             status = "Completed "
+            if self.is_rerun:
+                status += "re-run "
             if self.error:
                 status += "with error"
             else:
                 status += "sccessfully"
         elif self.is_running:
-            status = "Running"
+            status = "Re-running" if self.is_rerun else "Running"
         repr += f" (id: {self.id}, status: {status}"
         if self.__return_data:
             repr += f", output: <{type(self.__return_data).__name__} at {hex(id(self.__return_data))}>"
@@ -91,6 +99,18 @@ class Task:
     def run_sync(self):
         self.__run_once_guard()
         self.__run_proxy()
+
+    def reset(self):
+        if self.is_running:
+            raise InvalidTaskState("Cannot reset tasks that are currently running")
+        if not self.did_complete:
+            warnings.warn("Resetting task that hasn't run has no effect", Warning)
+            return
+        self.__thread = None
+        self.__error = None
+        self.__return_data = None
+        self.__did_run = False
+        self.__did_reset = True
 
     def __run_once_guard(self):
         if self.is_running:
@@ -115,6 +135,7 @@ class Task:
         except Exception as error:
             self.__error = error
         self.__did_run = True
+        self.__did_run_at_least_once = True
         self.__running = False
         if self.__callback:
             self.__post_exec()
