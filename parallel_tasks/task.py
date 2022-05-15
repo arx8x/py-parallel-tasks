@@ -1,6 +1,6 @@
 from typing import Callable, Union
 from uuid import uuid4
-from threading import Thread
+from .pthread import PThread, ThreadKilledException
 from .function import Function
 import enum
 import warnings
@@ -37,6 +37,7 @@ class Task:
         self.__dependency = dependency
         self.__did_run_at_least_once = False
         self.__did_reset = False
+        self.__is_being_killed = False
         # make sure the dependency is an instance of this class
         if self.__dependency and (type(self.__dependency) != type(self)):
             raise Exception(f"Dependecy must be a {self.__class__.__name__} instance")
@@ -66,6 +67,10 @@ class Task:
         return self.__did_run
 
     @property
+    def is_being_killed(self):
+        return self.__is_being_killed
+
+    @property
     def is_rerun(self):
         if self.__did_run_at_least_once:
             if self.__did_reset:
@@ -93,7 +98,7 @@ class Task:
 
     def run(self):
         self.__run_once_guard()
-        self.__thread = Thread(target=self.__run_proxy, daemon=False, name=self.name)
+        self.__thread = PThread(target=self.__run_proxy, daemon=False, name=self.name)
         self.__thread.start()
 
     def run_sync(self):
@@ -111,6 +116,11 @@ class Task:
         self.__return_data = None
         self.__did_run = False
         self.__did_reset = True
+
+    def stop(self):
+        if self.__thread:
+            self.__is_being_killed = True
+            self.__thread.kill()
 
     def __run_once_guard(self):
         if self.is_running:
@@ -132,11 +142,15 @@ class Task:
         try:
             return_data = self.__target.target(**self.__target.arguments)
             self.__return_data = return_data
+        except ThreadKilledException as error:
+            self.__killed = True
+            self.__error = error
         except Exception as error:
             self.__error = error
         self.__did_run = True
         self.__did_run_at_least_once = True
         self.__running = False
+        self.__is_being_killed = False
         if self.__callback:
             self.__post_exec()
 
