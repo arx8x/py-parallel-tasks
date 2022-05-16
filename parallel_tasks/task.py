@@ -1,9 +1,11 @@
+import sys
 from typing import Callable, Union
 from uuid import uuid4
 from .pthread import PThread, ThreadKilledException
 from .function import Function
 import enum
 import warnings
+import io
 
 
 class InvalidTaskState(Exception):
@@ -76,6 +78,12 @@ class Task:
             if self.__did_reset:
                 return True
         return False
+
+    @property
+    def output(self):
+        if isinstance(sys.stdout, io.StringIO):
+            if self.__thread:
+                return sys.stdout.getvalue(self.__thread.ident)
 
     def __repr__(self):
         repr = f"{self.__class__.__name__} '{self.name}'"
