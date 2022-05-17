@@ -1,11 +1,12 @@
 import sys
+import io
+import warnings
+import enum
 from typing import Callable, Union
 from uuid import uuid4
 from .pthread import PThread, ThreadKilledException
 from .function import Function
-import enum
-import warnings
-import io
+from .proxyio import ProxyIO
 
 
 class InvalidTaskState(Exception):
@@ -40,6 +41,9 @@ class Task:
         self.__did_run_at_least_once = False
         self.__did_reset = False
         self.__is_being_killed = False
+        self.__stdout = None
+        self.__stderr = None
+        self.combined_output = True
         # make sure the dependency is an instance of this class
         if self.__dependency and (type(self.__dependency) != type(self)):
             raise Exception(f"Dependecy must be a {self.__class__.__name__} instance")
@@ -80,10 +84,16 @@ class Task:
         return False
 
     @property
-    def output(self):
+    def stdout(self):
         if isinstance(sys.stdout, io.StringIO):
             if self.__thread:
                 return sys.stdout.getvalue(self.__thread.ident)
+
+    @property
+    def stderr(self):
+        if isinstance(sys.stderr, io.StringIO):
+            if self.__thread:
+                return sys.stderr.getvalue(self.__thread.ident)
 
     def __repr__(self):
         repr = f"{self.__class__.__name__} '{self.name}'"
@@ -147,6 +157,7 @@ class Task:
             # catch and rethrow stating where it failed
             except Exception as e:
                 raise Exception(f"Error while trying to run dependency: {e}")
+        self.__set_output_buffers()
         try:
             return_data = self.__target.target(**self.__target.arguments)
             self.__return_data = return_data
@@ -161,6 +172,20 @@ class Task:
         self.__is_being_killed = False
         if self.__callback:
             self.__post_exec()
+
+    def __set_output_buffers(self):
+        # IMPORTANT call this after thread has started
+        # becasuse ident is only set after thread is realized
+
+        # create buffers for capturing stdout and stderr
+        if not self.__thread or not (thread_id := self.__thread.ident):
+            return
+        stdout = io.StringIO()
+        stderr = stdout if self.combined_output else io.StringIO()
+        if isinstance(sys.stdout, ProxyIO):
+            sys.stdout.register_buf_for_id(stdout, thread_id)
+        if isinstance(sys.stderr, ProxyIO):
+            sys.stderr.register_buf_for_id(stderr, thread_id)
 
     def __post_exec(self):
         if callable(self.__callback):
