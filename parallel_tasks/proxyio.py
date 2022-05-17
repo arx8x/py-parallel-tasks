@@ -17,17 +17,29 @@ class ProxyIO(io.StringIO):
             self.__proxies[thread_id] = io.StringIO()
         return self.__proxies.get(thread_id, self.__orig_buf)
 
+    def register_buf_for_id(self, buf: io.StringIO, id: int):
+        if not isinstance(buf, io.StringIO):
+            raise ValueError("buf must be a StringIO")
+        self.__proxies[id] = buf
+
+    def deregister_buf(self, id: int):
+        try:
+            del(self.__proxies[id])
+        except KeyError:
+            pass
+
     def read(self, size):
         self.__select_buf().read(size)
 
     def write(self, s):
         self.__select_buf().write(s)
 
-    def getvalue(self, thread_id: int = None):
-        if not thread_id:
-            thread_id = threading.current_thread().ident
-        if isinstance(self.__proxies.get(thread_id), io.StringIO):
-            return self.__proxies.get(thread_id).getvalue()
+    def getvalue(self, id: int = None):
+        if not id:
+            id = threading.current_thread().ident
+        if isinstance(self.__proxies.get(id), io.StringIO):
+            buf = self.__proxies.get(id)
+            return buf.getvalue()
 
     @property
     def original_buf(self):
