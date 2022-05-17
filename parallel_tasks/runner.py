@@ -32,6 +32,8 @@ class ParallelRunner:
             new_task_pool = []
             for task in self.__task_pool:
                 if task.did_complete:
+                    if callable(self.__callback):
+                        self.__callback(task)
                     if task.error:
                         self.__failed_tasks.append(task)
                 else:

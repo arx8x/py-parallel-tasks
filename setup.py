@@ -2,7 +2,7 @@ from distutils.core import setup
 setup(
       name='parallel_tasks',
       packages=['parallel_tasks'],
-      version='0.6.5',
+      version='0.6.6',
       license='MIT',
       description=('simplified multithreaded batch tasks in python with callbacks'),
       author='ARX8x',
