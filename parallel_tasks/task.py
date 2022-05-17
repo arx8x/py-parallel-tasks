@@ -129,6 +129,7 @@ class Task:
         if not self.did_complete:
             warnings.warn("Resetting task that hasn't run has no effect", Warning)
             return
+        self.__unset_output_buffers()
         self.__thread = None
         self.__error = None
         self.__return_data = None
@@ -187,8 +188,20 @@ class Task:
         if isinstance(sys.stderr, ProxyIO):
             sys.stderr.register_buf_for_id(stderr, thread_id)
 
+    def __unset_output_buffers(self):
+        if not self.__thread or not (thread_id := self.__thread.native_id):
+            return
+        if isinstance(sys.stdout, ProxyIO):
+            sys.stdout.deregister_buf_for_id(thread_id)
+        if isinstance(sys.stderr, ProxyIO):
+            sys.stderr.deregister_buf_for_id(thread_id)
+
     def __post_exec(self):
         if callable(self.__callback):
             self.__callback(self)
         elif type(self.__callback) is Function:
             self.__callback.target(self)
+
+    def __del__(self):
+        # some cleanup
+        self.__unset_output_buffers()

@@ -22,7 +22,7 @@ class ProxyIO(io.StringIO):
             raise ValueError("buf must be a StringIO")
         self.__proxies[id] = buf
 
-    def deregister_buf(self, id: int):
+    def deregister_buf_for_id(self, id: int):
         try:
             del(self.__proxies[id])
         except KeyError:
