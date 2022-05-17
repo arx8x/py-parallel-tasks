@@ -87,13 +87,13 @@ class Task:
     def stdout(self):
         if isinstance(sys.stdout, io.StringIO):
             if self.__thread:
-                return sys.stdout.getvalue(self.__thread.ident)
+                return sys.stdout.getvalue(self.__thread.native_id)
 
     @property
     def stderr(self):
         if isinstance(sys.stderr, io.StringIO):
             if self.__thread:
-                return sys.stderr.getvalue(self.__thread.ident)
+                return sys.stderr.getvalue(self.__thread.native_id)
 
     def __repr__(self):
         repr = f"{self.__class__.__name__} '{self.name}'"
@@ -176,10 +176,10 @@ class Task:
 
     def __set_output_buffers(self):
         # IMPORTANT call this after thread has started
-        # becasuse ident is only set after thread is realized
+        # becasuse ident or native_id is only set after thread is realized
 
         # create buffers for capturing stdout and stderr
-        if not self.__thread or not (thread_id := self.__thread.ident):
+        if not self.__thread or not (thread_id := self.__thread.native_id):
             return
         stdout = io.StringIO()
         stderr = stdout if self.combined_output else io.StringIO()

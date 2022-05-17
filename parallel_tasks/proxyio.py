@@ -8,11 +8,11 @@ class ProxyIO(io.StringIO):
         if not isinstance(original_buf, io.TextIOWrapper):
             raise ValueError("original_buf must be a StringIO")
         self.__orig_buf = original_buf
-        self.__proxies = {threading.main_thread().ident: original_buf}
+        self.__proxies = {threading.main_thread().native_id: original_buf}
         super().__init__(initial_value=initial_value, newline=newline)
 
     def __select_buf(self) -> io.StringIO:
-        thread_id = threading.current_thread().ident
+        thread_id = threading.current_thread().native_id
         if thread_id not in self.__proxies:
             self.__proxies[thread_id] = io.StringIO()
         return self.__proxies.get(thread_id, self.__orig_buf)
@@ -36,7 +36,7 @@ class ProxyIO(io.StringIO):
 
     def getvalue(self, id: int = None):
         if not id:
-            id = threading.current_thread().ident
+            id = threading.current_thread().native_id
         if isinstance(self.__proxies.get(id), io.StringIO):
             buf = self.__proxies.get(id)
             return buf.getvalue()
