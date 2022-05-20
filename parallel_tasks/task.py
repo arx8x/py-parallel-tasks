@@ -160,7 +160,7 @@ class Task:
                 raise Exception(f"Error while trying to run dependency: {e}")
         self.__set_output_buffers()
         try:
-            return_data = self.__target.target(**self.__target.arguments)
+            return_data = self.__target.excecute()
             self.__return_data = return_data
         except ThreadKilledException as error:
             self.__killed = True
